@@ -1,0 +1,35 @@
+doctype html
+html(lang='en')
+    head
+        title markdown-it-rust demo
+        link(rel='stylesheet', href='https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css')
+        link(rel='stylesheet', href=require('./index.styl'))
+
+    body
+        .gh-ribbon
+            a(href='https://github.com/markdown-it-rust/markdown-it') Fork me on GitHub
+
+        .container
+            .row
+                .col-md-6
+                    .header
+                        a(href="https://github.com/markdown-it-rust/markdown-it") markdown-it-rust demo
+                    textarea#source.form-control
+                        include sample.md
+
+                .col-md-6
+                    ul#tabs-toggle.nav.nav-tabs
+                        li.nav-item
+                            a.nav-link(href='#', data-toggle="result-preview") Preview
+                        li.nav-item
+                            a.nav-link(href='#', data-toggle="result-html") HTML
+                        li.nav-item
+                            a.nav-link(href='#', data-toggle="result-ast") AST
+
+                    #result-preview.tab-content.form-control
+                    #result-html.tab-content.form-control
+                    #result-ast.tab-content.form-control
+                    #result-loading.tab-content
+                        .loading-banner Loading...
+
+        script(src=require('../pkg'))
