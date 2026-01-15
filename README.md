@@ -11,7 +11,6 @@ Build with:
 ```bash
 # Installs toolchain (cargo + uv)
 make install_toolchain
-
 # Builds entire project
 make build
 # OPTIONAL: Install built package in local python env
