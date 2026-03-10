@@ -29,7 +29,7 @@ pub struct Node {
 
     #[pyo3(get, set)]
     /// Custom data specific to the node type.
-    pub meta: HashMap<String, PyObject>,
+    pub meta: HashMap<String, Py<PyAny>>,
 }
 
 impl Node {
@@ -44,7 +44,7 @@ impl Node {
         nodes
     }
     /// add a key/value pair of node type specific data
-    fn add_data(&mut self, key: &str, value: PyObject) {
+    fn add_data(&mut self, key: &str, value: Py<PyAny>) {
         self.meta.insert(key.to_string(), value);
     }
 }
@@ -143,7 +143,7 @@ impl Node {
         }
         if recurse {
             for child in self.children.iter() {
-                Python::with_gil(|py| {
+                Python::attach(|py| {
                     s.push_str(&child.borrow(py).pretty(
                         attrs,
                         srcmap,
