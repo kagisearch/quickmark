@@ -1332,11 +1332,10 @@ def complete_backtick(text: str) -> str:
             part = f"{part}\n```"
         processed.append(part)
 
-    # TODO(Rehan): Needs the newline before close or else if the close tag is on the same line
-    # as the closing codeblock fence it can bug out. Not sure why though, feel like its something
-    # with quickmark
-    #
-    # https://linear.app/kagi/issue/AI-2671/code-blocks-messing-with-librarian-dropdowns
+    # TODO(Rehan): Needs newline before close
+    #    or else if the close tag is on the same line
+    #    as the closing codeblock fence it can bug out.
+    #    Not sure why though, feel like its something with quickmark
     if has_thinking and close_tag:
         processed[0] = f"{processed[0]}\n{close_tag}"
 
@@ -1514,8 +1513,7 @@ def unescape_br_in_table(text: str) -> str:
     """
     HTML unescapes <br> tags (and other variations of <br> tags) in tables
     """
-    # NOTE(Rehan): Ki (4o) may use <br/> for line breaks in a table for some reason
-    # https://linear.app/kagi/issue/SAM-4036/br-not-parsed-in-assistant-table
+    # NOTE(Rehan): GPT-4o may use <br/> for line breaks in a table for some reason
     # we determine what lines are table lines if they contain a pipe (|).
     # This can result in false positives, though these cases should be rare, low impact, and I'm not sure of a better way.
     contains_table = "-" in text and "|" in text
@@ -1778,8 +1776,8 @@ def get_urls(text: str) -> list[str]:
 
 def detect_proxy_urls(text: str) -> list[str]:
     """
-    >>> detect_proxy_urls("Graph below.\\n![Plot](https://storage.googleapis.com/kagi/graph.png)")
-    ['https://storage.googleapis.com/kagi/graph.png']
+    >>> detect_proxy_urls("Graph below.\\n![Plot](https://example.com/graph.png)")
+    ['https://example.com/graph.png']
     """
     urls_to_be_proxied = []
     urls = get_urls(text)
