@@ -11,25 +11,31 @@ install_toolchain:
 	uv sync
 
 
+setup:
+	uv sync
+	cargo update
+
 clean:
-	rm -rf $(QM_DIR)/target
-	rm -rf $(QM_DIR)/quickmark/.venv
-	rm -f  $(QM_DIR)/quickmark/pyproject.toml.lock
-	rm -f  $(QM_DIR)/quickmark/Cargo.toml.lock
-	rm -f  $(QM_DIR)/quickmark/uv.lock
 	cargo clean
+	# Python Build
+	find . -type d -name ".venv" -prune -exec rm -rf {} \;
+	find . -type d -name "*.egg-info" -prune -exec rm -rf {} \;
+	find . -type f -name "uv.lock" -prune -exec rm -f {} \;
+	find . -type f -name "pyproject.toml.lock" -prune -exec rm -rf {} \;
+	# Rust Build
+	find . -type d -name "target" -prune -exec rm -rf {} \;
+	find . -type f -name "Cargo.lock" -prune -exec rm -f {} \;
+	find . -type f -name "Cargo.toml.lock" -prune -exec rm -f {} \;
 
 
 build:
-	uv sync
-	cargo clean
-	cargo update
+	$(MAKE) setup
 	cargo build
 	cargo test
 	# Run python tests
 	uv run tox run
-	# TODO: Make this work; more tests run
-	# TODO: Also add GFM fixtures from
+	# TODO (Matt): Make this work; more tests run
+	# TODO (Matt): Also add GFM fixtures from
 	# https://github.com/markdown-it-rust/markdown-it-plugins.rs/tree/main/crates/gfm/tests
 	# uv run python -m pytest ./python/tests
 	uv run maturin build --release
