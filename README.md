@@ -46,11 +46,11 @@ md.render("# Hello, world!")
 # '<h1>Hello, world!</h1>\n'
 ```
 
-- `MarkdownIt("zero")` will not enable any plugins.
+- `MDParser("zero")` will not enable any plugins.
 
-- `MarkdownIt("commonmark")` for all CommonMark plugins.
+- `MDParser("commonmark")` for all CommonMark plugins.
 
-- `MarkdownIt("gfm")` for CommonMark + GitHub Flavoured Markdown plugins.
+- `MDParser("gfm")` for CommonMark + GitHub Flavoured Markdown plugins.
 
 ### Python CLI
 
