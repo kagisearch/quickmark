@@ -32,6 +32,13 @@ fn don_t_touch_text_in_links() {
 }
 
 #[test]
+fn protect_codeblock_email() {
+    let input = r#"`-e 'ssh -T -c aes128-gcm@openssh.com -o Compression=no -x'`"#;
+    let output = r#"<p><code>-e 'ssh -T -c aes128-gcm@openssh.com -o Compression=no -x'</code></p>"#;
+    run(input, output);
+}
+
+#[test]
 fn don_t_touch_text_in_autolinks() {
     let input = r#"<https://example.com>"#;
     let output = r#"<p><a href="https://example.com">https://example.com</a></p>"#;
