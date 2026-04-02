@@ -53,6 +53,22 @@ pub static DISPLAY_MATH_DOLLAR_REGEX: Lazy<FancyRegex> =
 
 pub static CITATION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"【\d+】").unwrap());
 
+// mirror SINGLE_BACKTICK_PATTERN from postprocess.py
+// - no preceding backslash or backtick
+// - opening single backtick, not followed by another backtick
+// - Capture group "code" is the inline code contents
+// - closing single backtick, not followed by another backtick
+pub static SINGLE_BACKTICK_REGEX: Lazy<FancyRegex> =
+    Lazy::new(|| FancyRegex::new(r"(?<![\\`])`(?P<code>(?:[^\\`]|\\.)+?)`(?!`)").unwrap());
+
+const SINGLE_BACKTICK_PLACEHOLDER: &str = "【‡SINGLE_BACKTICK‡】";
+
+struct Preprocessor {
+    name: &'static str,
+    processor: fn(Cow<'_, str>) -> Cow<'_, str>,
+    include_inline_code: bool,
+}
+
 fn apply_regex<'a>(src: Cow<'a, str>, regex: &Regex, replacement: &str) -> Cow<'a, str> {
     // NOTE(Rehan): Cow can be a borrowed value or an owned value
     // the output of regex.replace_all() is a Cow value - borrowed if regex doesn't match, owned if it does and get replaced
@@ -67,7 +83,7 @@ fn apply_regex<'a>(src: Cow<'a, str>, regex: &Regex, replacement: &str) -> Cow<'
     }
 }
 
-fn process_contact_info(src: Cow<'_, str>) -> Cow<'_, str> {
+fn apply_contact_info_regex(src: Cow<'_, str>) -> Cow<'_, str> {
     // NOTE(Rehan): this makes phone numbers like <tel:999-999-99999> and emails like <mailto:joedoe@example.com>
     let mut processed = apply_regex(src, &EMAIL_REGEX, &format!("$1<{}$2>$3", MAIL_PREFIX));
     processed = apply_regex(
@@ -76,6 +92,58 @@ fn process_contact_info(src: Cow<'_, str>) -> Cow<'_, str> {
         &format!("$1<{}$2>", PHONE_PREFIX),
     );
     processed
+}
+
+fn replace_single_backticks(src: Cow<'_, str>) -> Cow<'_, str> {
+    let result = SINGLE_BACKTICK_REGEX.replace_all(src.as_ref(), |caps: &fancy_regex::Captures| {
+        let code = caps.name("code").unwrap().as_str();
+        format!("```{SINGLE_BACKTICK_PLACEHOLDER}{code}{SINGLE_BACKTICK_PLACEHOLDER}```")
+    });
+    Cow::Owned(result.into_owned())
+}
+
+fn restore_single_backticks(src: Cow<'_, str>) -> Cow<'_, str> {
+    Cow::Owned(
+        src.replace(&format!("```{SINGLE_BACKTICK_PLACEHOLDER}"), "`")
+            .replace(&format!("{SINGLE_BACKTICK_PLACEHOLDER}```"), "`"),
+    )
+}
+
+// # NOTE(Rehan): copy Python protect_codeblock flow
+// protect valid single-backtick inline spans, split by triple-backtick blocks,
+// process only non-code segments, then restore inline code spans.
+fn protect_codeblocks(
+    src: Cow<'_, str>,
+    include_inline_code: bool,
+    processor: fn(Cow<'_, str>) -> Cow<'_, str>,
+) -> Cow<'_, str> {
+    let protected = if include_inline_code {
+        replace_single_backticks(src)
+    } else {
+        src
+    };
+
+    let parts: Vec<&str> = protected.split("```").collect();
+    let mut result = String::with_capacity(protected.len());
+
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            result.push_str("```");
+        }
+        if i % 2 == 0 {
+            let processed = processor(Cow::Borrowed(part));
+            result.push_str(&processed);
+        } else {
+            result.push_str(part);
+        }
+    }
+
+    let output = Cow::Owned(result);
+    if include_inline_code {
+        restore_single_backticks(output)
+    } else {
+        output
+    }
 }
 
 fn reenumerate_citations(src: Cow<'_, str>) -> Cow<'_, str> {
@@ -93,14 +161,28 @@ pub fn preprocess<'a>(src: &'a str, enabled_plugins: &[String]) -> Cow<'a, str> 
 
     // NOTE(Rehan): here we can define a preprocessor for each plugin
     // so we only run certain preprocessing if the plugin is enabled
-    let processors: Vec<(&str, fn(Cow<str>) -> Cow<str>)> =
-        vec![("kagi_contact_info", process_contact_info), ("citation", reenumerate_citations)];
+    let processors = vec![
+        Preprocessor {
+            name: "kagi_contact_info",
+            processor: apply_contact_info_regex,
+            include_inline_code: true,
+        },
+        Preprocessor {
+            name: "citation",
+            processor: reenumerate_citations,
+            include_inline_code: true,
+        },
+    ];
 
     // NOTE(Rehan): conflicting pattern matches go in order of enabled plugins
     // ideally no conflict though
-    for (plugin_name, processor) in processors {
-        if enabled_plugins.contains(&plugin_name.to_string()) {
-            processed = processor(processed);
+    for preprocessor in processors {
+        if enabled_plugins.contains(&preprocessor.name.to_string()) {
+            processed = protect_codeblocks(
+                processed,
+                preprocessor.include_inline_code,
+                preprocessor.processor,
+            );
         }
     }
 
