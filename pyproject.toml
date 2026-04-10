@@ -14,10 +14,10 @@ classifiers = [
     "Topic :: Text Processing :: Markup",
 ]
 authors = [
-    # credit original author
-    {name = "Chris Sewell", email = "chrisj_sewell@hotmail.com"},
     # Kagi Authors
     {name = "Matt Ranger", email = "matt@kagi.com"},
+    # credit original author
+    {name = "Chris Sewell", email = "chrisj_sewell@hotmail.com"},
 ]
 
 
