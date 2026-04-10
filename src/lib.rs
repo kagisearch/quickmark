@@ -55,10 +55,10 @@ use std::{panic, panic::AssertUnwindSafe, panic::PanicHookInfo, sync::Mutex};
 // even though multiple threads not expected
 static LAST_PANIC: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 
-/// throw in our custom panic hook to silence MDRS panics and store the message instead
+/// throw in our custom panic hook to silence rust panics and store the message instead
 pub fn init_panic_hook() {
     std::panic::set_hook(Box::new(|info: &PanicHookInfo| {
-        // NOTE(Rehan): payload often &str or String, but can be other stuff
+        // payload often &str or String, but can be other stuff
         let mut msg = match info.payload().downcast_ref::<&str>() {
             Some(s) => (*s).to_string(),
             None => match info.payload().downcast_ref::<String>() {
@@ -67,7 +67,7 @@ pub fn init_panic_hook() {
             },
         };
 
-        // NOTE(Rehan): location part of panic - part that points out line number of file and whatnot
+        // location part of panic; points out line num of file and whatnot
         if let Some(location) = info.location() {
             msg.push_str(&format!(" at {}:{}", location.file(), location.line()));
         }
@@ -411,32 +411,44 @@ impl MDParser {
                         .take()
                         .unwrap_or_else(|| "Rust panic occurred".to_owned()),
                 };
-
                 Err(PyRuntimeError::new_err(msg))
             }
         }
     }
-    /// Create a syntax tree from the markdown string.
-    fn tree(&self, py: Python, src: &str) -> nodes::Node {
-        let ast = self.parser.parse(src);
 
+    /// Create a syntax tree from the markdown string.
+    fn tree(&self, py: Python, src: &str) -> PyResult<nodes::Node> {
         fn walk_recursive(py: Python, node: &crate::Node, py_node: &mut nodes::Node) {
             for n in node.children.iter() {
                 let mut py_node_child = nodes::create_node(py, n);
-
                 stacker::maybe_grow(64 * 1024, 1024 * 1024, || {
                     walk_recursive(py, n, &mut py_node_child);
                 });
-
                 py_node.children.push(Py::new(py, py_node_child).unwrap());
             }
         }
+        let result = panic::catch_unwind(AssertUnwindSafe(|| {
+            let preprocessed = preprocess(src, &self.enabled_plugin_names);
+            let ast = self.parser.parse(preprocessed.as_ref());
 
-        let mut py_node = nodes::create_node(py, &ast);
-        walk_recursive(py, &ast, &mut py_node);
-        py_node
+            let mut py_node = nodes::create_node(py, &ast);
+            walk_recursive(py, &ast, &mut py_node);
+            py_node
+        }));
+        match result {
+            Ok(node) => Ok(node),
+            Err(_) => {
+                let lock_result = LAST_PANIC.lock();
+                let msg = match lock_result {
+                    Err(_) => "mutex lock failed".to_owned(),
+                    Ok(mut lock) => lock
+                        .take()
+                        .unwrap_or_else(|| "Rust panic occurred".to_owned()),
+                };
+                Err(PyRuntimeError::new_err(msg))
+            }
+        }
     }
-
     /// warmup for quickmark
     fn warmup(&self, _py: Python) {
         let _ = warmup();
