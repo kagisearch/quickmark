@@ -113,24 +113,19 @@ impl NodeValue for Link {
                 return;
             }
         }
-        if is_url_to_be_proxied(url) {
-            if config.remove_links_to_be_proxied {
-                fmt.text(&self.title);
-                return;
-            } else if audio {
-                fmt.open("figure", &[]);
+        if is_url_to_be_proxied(url) && audio {
+            fmt.open("figure", &[]);
+            fmt.open("figcaption", &[]);
+            fmt.text(&node.collect_text());
+            fmt.close("figcaption");
+            let audio_attrs = vec![
+                ("controls", "".to_string()), ("src", url.clone())
+            ];
+            fmt.open("audio", &audio_attrs);
+            fmt.close("audio");
 
-                fmt.open("figcaption", &[]);
-                fmt.text(&node.collect_text());
-                fmt.close("figcaption");
-
-                let audio_attrs = vec![("controls", "".to_string()), ("src", url.clone())];
-                fmt.open("audio", &audio_attrs);
-                fmt.close("audio");
-
-                fmt.close("figure");
-                return;
-            }
+            fmt.close("figure");
+            return;
         }
 
         if config.open_links_in_new_tab {

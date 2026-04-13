@@ -38,8 +38,6 @@ pub struct LinkExtensionPlugin {
     #[pyo3(get)]
     pub embed_third_party_content: bool,
     #[pyo3(get)]
-    pub remove_links_to_be_proxied: bool,
-    #[pyo3(get)]
     pub open_links_in_new_tab: bool,
 }
 
@@ -49,7 +47,6 @@ impl Default for LinkExtensionPlugin {
     fn default() -> Self {
         Self {
             embed_third_party_content: false,
-            remove_links_to_be_proxied: true,
             open_links_in_new_tab: true,
         }
     }
@@ -59,7 +56,6 @@ impl LinkExtensionPlugin {
     #[new]
     fn new(
         embed_third_party_content: bool,
-        remove_links_to_be_proxied: bool,
         open_links_in_new_tab: bool,
     ) -> PyClassInitializer<Self> {
         PyClassInitializer::from(Plugin {
@@ -108,30 +104,23 @@ impl CitationExtensionPlugin {
 
 #[pyclass(extends = Plugin)]
 #[derive(Debug, Clone, Copy)]
-pub struct ImageExtensionPlugin {
-    #[pyo3(get)]
-    pub remove_links_to_be_proxied: bool,
-}
+pub struct ImageExtensionPlugin {}
 
 impl MarkdownItExt for ImageExtensionPlugin {}
 
 impl Default for ImageExtensionPlugin {
     fn default() -> Self {
-        Self {
-            remove_links_to_be_proxied: true,
-        }
+        Self {}
     }
 }
 #[pymethods]
 impl ImageExtensionPlugin {
     #[new]
-    fn new(remove_links_to_be_proxied: bool) -> PyClassInitializer<Self> {
+    fn new() -> PyClassInitializer<Self> {
         PyClassInitializer::from(Plugin {
             name: "kagi_image".to_string(),
         })
-        .add_subclass(ImageExtensionPlugin {
-            remove_links_to_be_proxied,
-        })
+        .add_subclass(ImageExtensionPlugin {})
     }
 }
 
