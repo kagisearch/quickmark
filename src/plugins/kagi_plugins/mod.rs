@@ -9,7 +9,7 @@ pub mod math_inline;
 pub mod nl2br;
 use crate::plugin_config::CitationExtensionPlugin;
 use crate::plugins::cmark::{block, inline};
-use crate::{ImageExtensionPlugin, InkjetPlugin, LinkExtensionPlugin, MarkdownIt};
+use crate::{InkjetPlugin, LinkExtensionPlugin, MarkdownIt};
 
 // TODO (matt): Move this constant up!!
 const URL_SUBSTRING_TO_BE_PROXIED: [&str; 1] = ["https://storage.googleapis.com/kagi"];
@@ -34,7 +34,7 @@ pub fn add(md: &mut MarkdownIt) {
     inline::backticks::add(md);
     inline::emphasis::add(md);
 
-    image::add(md, ImageExtensionPlugin::default());
+    image::add(md);
     link::add(md, LinkExtensionPlugin::default());
     citation::add(md, CitationExtensionPlugin::default());
     contact_info::add(md);
