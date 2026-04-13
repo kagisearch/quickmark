@@ -108,7 +108,6 @@ class TestLinkProcessor:
         extensions = [
             LinkExtensionPlugin(
                 embed_third_party_content=True,
-                remove_links_to_be_proxied=False,
                 open_links_in_new_tab=True,
             )
         ]

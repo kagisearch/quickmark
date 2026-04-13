@@ -15,7 +15,6 @@ def md_to_html(
     citations: list[CitationQM] | None = None,
     open_links_in_new_tab: bool = True,
     embed_third_party_content: bool = False,
-    remove_links_to_be_proxied: bool = False,
     rust_extensions: list[Plugin] | None = None,
 ) -> str:
     if rust_extensions is not None:
@@ -28,12 +27,9 @@ def md_to_html(
                 Plugin(name="emphasis"),
                 LinkExtensionPlugin(
                     embed_third_party_content=embed_third_party_content,
-                    remove_links_to_be_proxied=remove_links_to_be_proxied,
                     open_links_in_new_tab=open_links_in_new_tab,
                 ),
-                ImageExtensionPlugin(
-                    remove_links_to_be_proxied=remove_links_to_be_proxied,
-                ),
+                ImageExtensionPlugin(),
                 Plugin(name="kagi_contact_info"),
                 Plugin(name="entity"),  # html entities
                 Plugin(name="blockquote"),
