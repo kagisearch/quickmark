@@ -63,7 +63,6 @@ impl LinkExtensionPlugin {
         })
         .add_subclass(LinkExtensionPlugin {
             embed_third_party_content,
-            remove_links_to_be_proxied,
             open_links_in_new_tab,
         })
     }
