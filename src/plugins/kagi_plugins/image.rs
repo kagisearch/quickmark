@@ -4,7 +4,6 @@
 //!
 //! <https://spec.commonmark.org/0.30/#images>
 use crate::mdparser::inline::{InlineRule, InlineState};
-use crate::plugin_config::ImageExtensionPlugin;
 use crate::plugins::kagi_plugins::link::LINK_MD_PATTERN;
 use crate::{MarkdownIt, Node, NodeValue, Renderer};
 use html_escape::decode_html_entities;
@@ -13,14 +12,13 @@ use html_escape::decode_html_entities;
 pub struct Image {
     pub url: Option<String>,
     pub title: String,
-    pub config: ImageExtensionPlugin,
 }
 
 impl NodeValue for Image {
     fn render(&self, node: &Node, fmt: &mut dyn Renderer) {
         let mut attrs = node.attrs.clone();
 
-        if self.url.is_none() | self.config.remove_links_to_be_proxied {
+        if self.url.is_none() {
             fmt.text(&self.title);
             return;
         }
@@ -43,7 +41,6 @@ impl InlineRule for ImageScanner {
         if !input.starts_with("![") {
             return None;
         }
-        let config = state.md.ext.get::<ImageExtensionPlugin>().unwrap();
         if let Some(caps) = LINK_MD_PATTERN.captures(input) {
             let complete_match = &caps[0];
             let link_text = caps.name("link_text").map(|m| m.as_str().to_string())?;
@@ -53,11 +50,7 @@ impl InlineRule for ImageScanner {
                 .map(|m| decode_html_entities(m.as_str()).to_string());
 
             Some((
-                Node::new(Image {
-                    url,
-                    title: link_text,
-                    config: *config,
-                }),
+                Node::new(Image {url, title: link_text}),
                 // NOTE(Rehan): + 1 for exclamation mark
                 // trim end to not replace trailing newline
                 1 + complete_match.trim_end().len(),
@@ -68,7 +61,6 @@ impl InlineRule for ImageScanner {
     }
 }
 
-pub fn add(md: &mut MarkdownIt, config: ImageExtensionPlugin) {
-    md.ext.insert(config);
+pub fn add(md: &mut MarkdownIt) {
     md.inline.add_rule::<ImageScanner>();
 }

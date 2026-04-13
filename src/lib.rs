@@ -82,9 +82,6 @@ enum AnyPlugin<'py> {
     Link(PyRef<'py, LinkExtensionPlugin>),
 
     #[pyo3(transparent)]
-    Image(PyRef<'py, ImageExtensionPlugin>),
-
-    #[pyo3(transparent)]
     Citation(PyRef<'py, CitationExtensionPlugin>),
 
     #[pyo3(transparent)]
@@ -163,10 +160,7 @@ impl MDParser {
                 );
             }
             "kagi_image" => {
-                crate::plugins::kagi_plugins::image::add(
-                    &mut self.parser,
-                    ImageExtensionPlugin::default(),
-                );
+                crate::plugins::kagi_plugins::image::add(&mut self.parser);
             }
             "kagi_contact_info" => {
                 crate::plugins::kagi_plugins::contact_info::add(&mut self.parser);
@@ -258,7 +252,6 @@ impl MDParser {
     fn _enable(&mut self, py: Python, plugin: Py<Plugin>) -> Result<(), PyErr> {
         match plugin.extract::<AnyPlugin>(py)? {
             AnyPlugin::Link(p) => link::add(&mut self.parser, *p),
-            AnyPlugin::Image(p) => image::add(&mut self.parser, *p),
             AnyPlugin::Citation(p) => citation::add(&mut self.parser, p.clone()),
             AnyPlugin::InlineMath(p) => math_inline::add(&mut self.parser, *p),
             AnyPlugin::DisplayMath(p) => math_display::add(&mut self.parser, *p),

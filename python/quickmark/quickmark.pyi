@@ -124,16 +124,12 @@ class LinkExtensionPlugin(Plugin):
     def __init__(
         self,
         embed_third_party_content: bool,
-        remove_links_to_be_proxied: bool,
         open_links_in_new_tab: bool,
     ) -> None: ...
 
 
 class ImageExtensionPlugin(Plugin):
-    def __init__(
-        self,
-        remove_links_to_be_proxied: bool,
-    ) -> None: ...
+    def __init__(self) -> None: ...
 
 
 class InkjetPlugin(Plugin):
