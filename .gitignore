@@ -1,5 +1,7 @@
 /target
 uv.lock
+# makefile tag file
+pyproject.toml.lock
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
