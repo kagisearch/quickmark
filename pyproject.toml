@@ -24,7 +24,7 @@ authors = [
 dependencies = [
     "maturin[patchelf]>=1.8.3",
     "pytest<=8.1",
-    "tox>=4.24.2",
+    "pytest-xdist",
 ]
 
 [package.metadata.maturin]

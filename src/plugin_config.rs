@@ -1,7 +1,7 @@
 use crate::{mdparser::extset::MarkdownItExt, plugins::kagi_plugins::citation::CitationQM};
 use pyo3::prelude::*;
 
-// NOTE(Rehan): instructions on creating new plugin:
+// INSTRUCTIONS ON CREATING NEW PLUGINS:
 // - add string name in `_enable_str`
 // - add to `add` method in `mod.rs`
 // - add to `KAGI_PLUGIN_NAMES`

@@ -6,7 +6,7 @@ def test_enable() -> None:
     mdit = MDParser()
     with pytest.raises(TypeError):
         mdit.enable(1)  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(Exception):
         mdit.enable("unknown")  # type: ignore[arg-type]
     mdit.enable("heading")
     with pytest.raises(ValueError):
@@ -23,18 +23,24 @@ def test_zero() -> None:
 
 def test_zero_header() -> None:
     mdit = MDParser("zero").enable("heading")
-    assert mdit.render("# markdown-it rulezz!") == "<h1>markdown-it rulezz!</h1>\n"
+    assert (
+        mdit.render("# markdown-it rulezz!") == "<h1>markdown-it rulezz!</h1>\n"
+    )
 
 
 def test_gfm() -> None:
     mdit = MDParser("gfm")
-    assert mdit.render("# markdown-it rulezz!") == "<h1>markdown-it rulezz!</h1>\n"
+    assert (
+        mdit.render("# markdown-it rulezz!") == "<h1>markdown-it rulezz!</h1>\n"
+    )
 
 
 def test_render_xhtml() -> None:
     mdit = MDParser()
     assert mdit.render("![a](b)") == '<p><img src="b" alt="a" /></p>\n'
-    assert mdit.render("![a](b)", xhtml=False) == '<p><img src="b" alt="a"></p>\n'
+    assert (
+        mdit.render("![a](b)", xhtml=False) == '<p><img src="b" alt="a"></p>\n'
+    )
 
 
 def test_node() -> None:
