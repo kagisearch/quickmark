@@ -33,9 +33,8 @@ build:
 	cargo build
 	cargo test
 	# Run python tests
-	uv run tox run
-	# TODO (Matt): Make this work; more tests run
-	# TODO (Matt): Also add GFM fixtures from
+	uv run pytest -n 4
+	# TODO (Matt): Add GFM fixtures from
 	# https://github.com/markdown-it-rust/markdown-it-plugins.rs/tree/main/crates/gfm/tests
 	# uv run python -m pytest ./python/tests
 	uv run maturin build --release

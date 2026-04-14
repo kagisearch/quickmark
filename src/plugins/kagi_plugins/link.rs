@@ -28,7 +28,7 @@ pub static LINK_MD_PATTERN: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
         r"(?x)
         \[
-        (?P<link_text>.+?)
+        (?P<link_text>.*?)
         \]
         (?P<open_parenthesis>\()
         (?P<url>[^)]*)
@@ -157,13 +157,18 @@ impl InlineRule for LinkScanner {
             let url = caps
                 .name("url")
                 .map(|m| decode_html_entities(m.as_str()).to_string());
+            let title = if link_text.is_empty() {
+                url.clone().unwrap_or_default()
+            } else {
+                link_text
+            };
             let close_parenthesis: Option<String> = caps
                 .name("close_parenthesis")
                 .map(|m| decode_html_entities(m.as_str()).to_string());
             Some((
                 Node::new(Link {
                     url: url,
-                    title: link_text,
+                    title,
                     close_parenthesis: close_parenthesis,
                     config: *config,
                 }),

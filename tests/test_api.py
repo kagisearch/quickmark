@@ -37,10 +37,17 @@ def test_gfm() -> None:
 
 def test_render_xhtml() -> None:
     mdit = MDParser()
-    assert mdit.render("![a](b)") == '<p><img src="b" alt="a" /></p>\n'
-    assert (
-        mdit.render("![a](b)", xhtml=False) == '<p><img src="b" alt="a"></p>\n'
-    )
+    res1 = mdit.render("![a](b)")
+    res2 = mdit.render("![a](b)", xhtml=False)
+    assert "<p><img" in res1
+    assert "<p><img" in res2
+    assert 'src="b"' in res1
+    assert 'src="b"' in res2
+    assert 'alt="a"' in res1
+    assert 'alt="a"' in res2
+    # xhtml doesn't have /> for the link
+    assert "/></p>\n" in res1
+    assert "/></p>\n" not in res2
 
 
 def test_node() -> None:

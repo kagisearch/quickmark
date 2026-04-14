@@ -380,10 +380,10 @@ impl MDParser {
     fn enable(slf: Py<Self>, py: Python, plugin: PluginOrStr) -> PyResult<Py<Self>> {
         match plugin {
             PluginOrStr::PluginObj(p) => {
-                slf.borrow_mut(py)._enable(py, plugin)?
+                slf.borrow_mut(py)._enable(py, p)?
             },
             PluginOrStr::Name(name) => {
-                slf.borrow_mut(py)._enable_str(&p.name)?
+                slf.borrow_mut(py)._enable_str(&name)?
             }
         };
         Ok(slf)
@@ -392,7 +392,14 @@ impl MDParser {
     /// Enable multiple plugins
     fn enable_many(slf: Py<Self>, py: Python, plugins: Vec<PluginOrStr>) -> PyResult<Py<Self>> {
         for plugin in plugins {
-            slf.borrow_mut(py)._enable(py, plugin)?;
+            match plugin {
+                PluginOrStr::PluginObj(p) => {
+                    slf.borrow_mut(py)._enable(py, p)?
+                },
+                PluginOrStr::Name(name) => {
+                    slf.borrow_mut(py)._enable_str(&name)?
+                }
+            };
         }
         Ok(slf)
     }

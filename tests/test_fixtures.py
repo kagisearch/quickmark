@@ -1,20 +1,24 @@
-# import json
-# from pathlib import Path
+import json
+from pathlib import Path
 
-# from quickmark import MDParser
-# import pytest
+from quickmark import MDParser
+import pytest
 
-# FIXTURE_PATH = Path(__file__).parent.joinpath("fixtures")
+FIXTURE_PATH = Path(__file__).parent.joinpath("fixtures")
+
+
+# TODO: these tests don't currently pass because of AST reordering
+#   Make them pass.
 
 
 # @pytest.mark.parametrize(
-#     "entry", json.loads(FIXTURE_PATH.joinpath("commonmark_spec.json").read_text("utf8"))
+#     "entry",
+#     json.loads(FIXTURE_PATH.joinpath("commonmark_spec.json").read_text("utf8")),
 # )
 # def test_cmark_spec(entry):
 #     md = MDParser("commonmark")
 #     output = md.render(entry["markdown"])
 #     expected = entry["html"]
-
 #     assert output == expected
 
 
@@ -33,35 +37,45 @@
 #         raise
 
 
-# # @pytest.mark.param_file(FIXTURE_PATH.joinpath("linkify.md"))
-# # def test_linkify(file_params):
-# #     md = MDParser().enable("linkify")
-# #     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+# @pytest.mark.param_file(FIXTURE_PATH.joinpath("linkify.md"))
+# def test_linkify(file_params):
+#     md = MDParser().enable("linkify")
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("smartquotes.md"))
 # def test_smartquotes(file_params):
 #     md = MDParser().enable("replacements").enable("smartquotes")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("typographer.md"))
 # def test_typographer(file_params):
 #     md = MDParser().enable("replacements")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("tables.md"))
 # def test_table(file_params):
 #     md = MDParser().enable("table")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("normalize.md"))
 # def test_normalize_url(file_params):
 #     md = MDParser()
 #     try:
-#         assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#         assert file_params.assert_expected(
+#             md.render(file_params.content), rstrip=True
+#         )
 #     except AssertionError:
 #         if file_params.title in (
 #             "Keep %25 as is because decoding it may break urls, #720",
@@ -74,37 +88,49 @@
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("strikethrough.md"))
 # def test_strikethrough(file_params):
 #     md = MDParser().enable("strikethrough")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("sourcepos.md"))
 # def test_sourcepos(file_params):
 #     md = MDParser().enable("sourcepos")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("front_matter.md"))
 # def test_front_matter(file_params):
 #     md = MDParser().enable("front_matter")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("tasklists.md"))
 # def test_tasklist(file_params):
 #     md = MDParser().enable("tasklist")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("footnote.md"))
 # def test_footnote(file_params):
 #     md = MDParser().enable("footnote")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("autolink_ext.md"))
 # def test_autolink_ext(file_params):
 #     md = MDParser().enable("autolink_ext")
-#     assert file_params.assert_expected(md.render(file_params.content), rstrip=True)
+#     assert file_params.assert_expected(
+#         md.render(file_params.content), rstrip=True
+#     )
 
 
 # @pytest.mark.param_file(FIXTURE_PATH.joinpath("ast.md"))

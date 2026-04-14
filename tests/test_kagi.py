@@ -13,39 +13,41 @@ import quickmark
 
 
 class TestLinkProcessor:
-    async def test_normal_link_unaffected(self):
+    def test_normal_link_unaffected(self):
         md_text = "This is an [example](https://www.example.com)."
         html_text = md_to_html(md_text)
         assert '<a href="https://www.example.com"' in html_text
 
-    async def test_codeblock(self):
+    def test_codeblock(self):
         md_text = "`[example](https://www.example.com).`"
         html_text = md_to_html(md_text)
         assert '<a href="https://www.example.com"' not in html_text
 
-    async def test_image(self):
+    def test_image(self):
         md_text = "This is an ![image](https://www.example.com/image.png)."
         html_text = md_to_html(md_text)
         assert "<img" in html_text
 
-    async def test_image_empty_alt_text(self):
+    def test_image_empty_alt_text(self):
         md_text = "This is an ![](https://www.example.com/image.png)."
-        html_text = md_to_html(md_text)
+        html_text = md_to_html(
+            md_text, rust_extensions=[ImageExtensionPlugin()]
+        )
         assert "<img" in html_text
         assert "https://www.example.com/image.png" in html_text
 
-    async def test_link_empty_text_falls_back_to_url(self):
+    def test_link_empty_text_falls_back_to_url(self):
         md_text = "Check [](https://www.example.com/page) out."
         html_text = md_to_html(md_text)
         assert '<a href="https://www.example.com/page"' in html_text
         assert "https://www.example.com/page</a>" in html_text
 
-    async def test_open_in_new_tab(self):
+    def test_open_in_new_tab(self):
         md_text = "This is an [link](https://www.example.com/link)."
         html_text = md_to_html(md_text, open_links_in_new_tab=True)
         assert 'target="_blank"' in html_text
 
-    async def test_square_brackets_link_text(self):
+    def test_square_brackets_link_text(self):
         md_text = "This is an [link and these are [square brackets]](https://www.example.com/link)."
         html_text = md_to_html(md_text)
         assert '<a href="https://www.example.com/link"' in html_text
