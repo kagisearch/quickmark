@@ -97,6 +97,14 @@ enum AnyPlugin<'py> {
     Base(PyRef<'py, Plugin>),
 }
 
+// just a util struct to pass in str to plugin enabling in python side
+#[derive(FromPyObject)]
+enum PluginOrStr {
+    PluginObj(Py<Plugin>),
+    Name(String),
+}
+
+
 /// Main parser class
 #[pyclass]
 #[derive(Debug)]
@@ -249,6 +257,9 @@ impl MDParser {
         Ok(())
     }
 
+
+
+
     fn _enable(&mut self, py: Python, plugin: Py<Plugin>) -> Result<(), PyErr> {
         match plugin.extract::<AnyPlugin>(py)? {
             AnyPlugin::Link(p) => link::add(&mut self.parser, *p),
@@ -365,16 +376,30 @@ impl MDParser {
         .collect()
     }
 
-    /// Enable a plugin
-    fn enable(slf: Py<Self>, py: Python, plugin: Py<Plugin>) -> PyResult<Py<Self>> {
-        slf.borrow_mut(py)._enable(py, plugin)?;
+    /// Enable a plugin by str or plugin obj
+    fn enable(slf: Py<Self>, py: Python, plugin: PluginOrStr) -> PyResult<Py<Self>> {
+        match plugin {
+            PluginOrStr::PluginObj(p) => {
+                slf.borrow_mut(py)._enable(py, p)?
+            },
+            PluginOrStr::Name(name) => {
+                slf.borrow_mut(py)._enable_str(&name)?
+            }
+        };
         Ok(slf)
     }
 
     /// Enable multiple plugins
-    fn enable_many(slf: Py<Self>, py: Python, plugins: Vec<Py<Plugin>>) -> PyResult<Py<Self>> {
+    fn enable_many(slf: Py<Self>, py: Python, plugins: Vec<PluginOrStr>) -> PyResult<Py<Self>> {
         for plugin in plugins {
-            slf.borrow_mut(py)._enable(py, plugin)?;
+            match plugin {
+                PluginOrStr::PluginObj(p) => {
+                    slf.borrow_mut(py)._enable(py, p)?
+                },
+                PluginOrStr::Name(name) => {
+                    slf.borrow_mut(py)._enable_str(&name)?
+                }
+            };
         }
         Ok(slf)
     }
