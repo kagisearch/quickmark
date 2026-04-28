@@ -41,7 +41,10 @@ impl InlineRule for ImageScanner {
         if !input.starts_with("![") {
             return None;
         }
-        if let Some(caps) = LINK_MD_PATTERN.captures(input) {
+        // Match the `[...](...)` portion starting right after the `!`. LINK_MD_PATTERN
+        // is anchored with `^`, so we pass `&input[1..]` to align the anchor with the
+        // `[`. `!` is ASCII, so slicing by 1 is safe.
+        if let Some(caps) = LINK_MD_PATTERN.captures(&input[1..]) {
             let complete_match = &caps[0];
             let link_text = caps.name("link_text").map(|m| m.as_str().to_string())?;
             let link_text = decode_html_entities(&link_text).to_string();

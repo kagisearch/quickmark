@@ -27,13 +27,16 @@ clean:
 	find . -type f -name "Cargo.lock" -prune -exec rm -f {} \;
 	find . -type f -name "Cargo.toml.lock" -prune -exec rm -f {} \;
 
+test:
+	cargo test
+	# Run python tests
+	uv run pytest -n 4
+
 
 build:
 	$(MAKE) setup
 	cargo build
-	cargo test
-	# Run python tests
-	uv run pytest -n 4
+	$(MAKE) test
 	# TODO (Matt): Add GFM fixtures from
 	# https://github.com/markdown-it-rust/markdown-it-plugins.rs/tree/main/crates/gfm/tests
 	# uv run python -m pytest ./python/tests

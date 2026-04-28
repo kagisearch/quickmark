@@ -53,6 +53,26 @@ class TestLinkProcessor:
         assert '<a href="https://www.example.com/link"' in html_text
         assert "link and these are [square brackets]" in html_text
 
+    def test_rust_no_panic_unmatched_bracket_before_link(self):
+        """
+        Parser panicked "byte index N is not a char boundary"
+        when unmatched `[...]` occurred before a real `](...)`
+        link with multi-byte chars in between
+        Caused by LinkScanner advancing pos by len of regex match that didn't start at pos 0.
+        """
+        md_to_html("**[a]bc社**\n[x](y)")
+
+    def test_rust_no_panic_unmatched_image_bracket(self):
+        # Same class of bug via ImageScanner.
+        md_to_html("![a]bc社\n[x](y)")
+
+    def test_rust_no_panic_real_world_mdrs_error(self):
+        # Abbreviated real-world failure from production logs.
+        md_to_html(
+            "**[专家模式]分享下我刚成型的着魔暴风盾格挡流回响术士NGA玩家社区**\n"
+            "[https://bbs.nga.cn/read.php?tid=46492773](https://bbs.nga.cn/read.php?tid=46492773)\n"
+        )
+
 
 class TestContactInfo:
     """

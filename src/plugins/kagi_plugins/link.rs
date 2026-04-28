@@ -25,9 +25,14 @@ use super::is_url_to_be_proxied;
 /// assert_eq!(parse_youtube_id("https://www.invalid.com"), None);
 /// ```
 pub static LINK_MD_PATTERN: Lazy<Regex> = Lazy::new(|| {
+    // NOTE(Boon): `^` anchor is required. Without it, an unmatched `[...]` followed
+    // by a real `](...)` later in the input would cause the scanner to return the
+    // byte length of the later match and the caller would advance `state.pos` into
+    // the middle of a multi-byte character sitting between the two brackets,
+    // panicking with "byte index N is not a char boundary".
     Regex::new(
         r"(?x)
-        \[
+        ^\[
         (?P<link_text>.*?)
         \]
         (?P<open_parenthesis>\()
@@ -185,3 +190,23 @@ pub fn add(md: &mut MarkdownIt, config: LinkExtensionPlugin) {
     md.ext.insert(config);
     md.inline.add_rule::<LinkScanner>();
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::LINK_MD_PATTERN;
+
+    #[test]
+    fn link_pattern_is_anchored_at_start() {
+        // LINK_MD_PATTERN must not match a `](...)` that sits later in the input
+        // than the opening `[`, because the scanner uses the match's byte length
+        // to advance `state.pos` and assumes the match starts at position 0.
+        // Without the `^` anchor, this advance can land mid-character when
+        // multi-byte chars sit between an unmatched `[...]` and a real `](...)`,
+        // causing "byte index N is not a char boundary" panics (see mdrs_error.json).
+        assert!(LINK_MD_PATTERN.captures("[unmatched bracket\nfollowed by [x](y)").is_none());
+        assert!(LINK_MD_PATTERN.captures("prefix[x](y)").is_none());
+        assert!(LINK_MD_PATTERN.captures("[x](y)").is_some());
+    }
+}
+
