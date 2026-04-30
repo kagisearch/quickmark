@@ -378,6 +378,26 @@ class TestMathExtension:
     #     text = md_to_html(text)
     #     assert self.has_latex(text)
 
+    def test_inline_boxed_rewritten_to_mathbf(self):
+        """`\\boxed` is rewritten to `\\mathbf` because pulldown_latex does
+        not support it."""
+        boxed = md_to_html(r"The answer is $\boxed{42}$")
+        mathbf = md_to_html(r"The answer is $\mathbf{42}$")
+        assert r"\boxed" not in boxed
+        assert boxed == mathbf
+
+    def test_block_boxed_rewritten_to_mathbf(self):
+        boxed = md_to_html(r"$$\boxed{x^2}$$")
+        mathbf = md_to_html(r"$$\mathbf{x^2}$$")
+        assert r"\boxed" not in boxed
+        assert boxed == mathbf
+
+    def test_boxed_word_boundary(self):
+        """Only the `\\boxed` macro is rewritten; lookalike identifiers like
+        `\\boxedword` stay intact."""
+        out = md_to_html(r"$\boxedword$")
+        assert r"\mathbfword" not in out
+
     def test_latex_dollar_spacing(self):
         """Test case relating to spacing around dollar signs"""
         text = textwrap.dedent(r"""
