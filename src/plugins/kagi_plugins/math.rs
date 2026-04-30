@@ -2,9 +2,12 @@
 //! keep here for reuse between inline math and siplay math modules, as well as applying caching
 use cached::proc_macro::cached;
 use html_escape::encode_text;
+use once_cell::sync::Lazy;
 use pulldown_latex::config::DisplayMode;
 use pulldown_latex::RenderConfig;
 use pulldown_latex::{mathml::push_mathml, Parser, Storage};
+use regex::Regex;
+static BOXED_MACRO_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\boxed\b").unwrap());
 
 #[cached(size = 128)]
 pub fn math_render_cached(math: String, block_display_mode: bool) -> String {
@@ -12,6 +15,11 @@ pub fn math_render_cached(math: String, block_display_mode: bool) -> String {
 }
 
 pub fn math_render(math: String, block_display_mode: bool) -> String {
+    // pulldown_latex doesn't support \boxed; rewrite to \mathbf so it renders
+    // as bold. Python's latex2mathml pipeline applies the same rewrite.
+    let math = BOXED_MACRO_REGEX
+        .replace_all(&math, r"\mathbf")
+        .into_owned();
     let storage = Storage::new();
     let parser = Parser::new(&math, &storage);
     let mut config: RenderConfig = Default::default();
