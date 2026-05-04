@@ -51,6 +51,16 @@ pub static INLINE_MATH_DOLLAR_REGEX: Lazy<FancyRegex> = Lazy::new(|| {
 pub static DISPLAY_MATH_DOLLAR_REGEX: Lazy<FancyRegex> =
     Lazy::new(|| FancyRegex::new(r"(?s)^\$\$(?:\n)?(?P<math>.*?)(?<!\\)(?:\n)?\$\$").unwrap());
 
+// mirror INLINE_MATH_PAREN_PATTERN from postprocess.py
+// match `\(math\)`, where the opening/closing backslashes are not themselves escaped
+pub static INLINE_MATH_PAREN_REGEX: Lazy<FancyRegex> =
+    Lazy::new(|| FancyRegex::new(r"^\\\((?P<math>.*?)(?<!\\)\\\)").unwrap());
+
+// mirror DISPLAY_MATH_BRACKET_PATTERN from postprocess.py
+// display math can span multiple lines, so enable dotall mode
+pub static DISPLAY_MATH_BRACKET_REGEX: Lazy<FancyRegex> =
+    Lazy::new(|| FancyRegex::new(r"(?s)^\\\[(?P<math>.*?)(?<!\\)\\\]").unwrap());
+
 pub static CITATION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"【\d+】").unwrap());
 
 // mirror SINGLE_BACKTICK_PATTERN from postprocess.py
