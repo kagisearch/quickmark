@@ -68,8 +68,15 @@ pub static CITATION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"【\d+】").u
 // - opening single backtick, not followed by another backtick
 // - Capture group "code" is the inline code contents
 // - closing single backtick, not followed by another backtick
-pub static SINGLE_BACKTICK_REGEX: Lazy<FancyRegex> =
-    Lazy::new(|| FancyRegex::new(r"(?<![\\`])`(?P<code>(?:[^\\`]|\\.)+?)`(?!`)").unwrap());
+//
+// The body uses an "unrolled loop" — `[^`\\]*(?:\\.[^`\\]*)*` — so each input
+// position has exactly one path through the alternation. This keeps matching
+// linear and avoids the catastrophic backtracking that the equivalent
+// `(?:[^\\`]|\\.)+?` form can exhibit on large inputs with many unmatched
+// backticks (which used to trip fancy-regex's backtrack limit).
+pub static SINGLE_BACKTICK_REGEX: Lazy<FancyRegex> = Lazy::new(|| {
+    FancyRegex::new(r"(?<![\\`])`(?!`)(?P<code>[^`\\]*(?:\\.[^`\\]*)*)`(?!`)").unwrap()
+});
 
 const SINGLE_BACKTICK_PLACEHOLDER: &str = "【‡SINGLE_BACKTICK‡】";
 
