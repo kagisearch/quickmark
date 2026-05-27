@@ -36,9 +36,33 @@ unicode-general-category = ">= 0.1.0"
 pulldown-latex = "0.7.1"
 fancy-regex = "0.15.0"
 cached = "0.56.0"
-inkjet = "0.11.1"
 v_htmlescape = "0.15.8" # simd escaping - faster
 phf = { version = "0.12.1", features = ["macros"] }
+inkjet = { version = "0.11.1", default-features = false, features = [
+  "html",
+  "theme",
+  "terminal",
+  # no-op language
+  "language-plaintext",
+  # Languages to use
+  "language-bash",
+  "language-c",
+  "language-cpp",
+  "language-dockerfile",
+  "language-dart",
+  "language-go",
+  "language-html",
+  "language-java",
+  "language-javascript",
+  "language-json",
+  "language-latex",
+  "language-python",
+  "language-rust",
+  "language-sql",
+  "language-toml",
+  "language-typescript",
+  "language-yaml",
+] }
 
 [dev-dependencies]
 criterion = "0.7.0"
