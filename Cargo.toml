@@ -47,6 +47,7 @@ inkjet = { version = "0.11.1", default-features = false, features = [
   # Languages to use
   "language-bash",
   "language-c",
+  "language-c-sharp",
   "language-cpp",
   "language-dockerfile",
   "language-dart",
