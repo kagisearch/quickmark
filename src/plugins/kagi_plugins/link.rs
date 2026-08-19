@@ -11,6 +11,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use url::Url;
 
+use super::image::parse_image;
 use super::is_url_to_be_proxied;
 
 /// Parse Youtube ID from url
@@ -30,10 +31,13 @@ pub static LINK_MD_PATTERN: Lazy<Regex> = Lazy::new(|| {
     // byte length of the later match and the caller would advance `state.pos` into
     // the middle of a multi-byte character sitting between the two brackets,
     // panicking with "byte index N is not a char boundary".
+    // NOTE(Boon): the `!\[..\](..)` alternative must come first. `link_text` is
+    // otherwise lazy and stops at the inner image's `]`, so `[![alt](img)](href)`
+    // would match only `[![alt](img)` and render the leftovers as text.
     Regex::new(
         r"(?x)
         ^\[
-        (?P<link_text>.*?)
+        (?P<link_text>!\[[^\]]*\]\([^)]*\)|.*?)
         \]
         (?P<open_parenthesis>\()
         (?P<url>[^)]*)
@@ -156,27 +160,37 @@ impl InlineRule for LinkScanner {
         let config = state.md.ext.get::<LinkExtensionPlugin>().unwrap();
         if let Some(caps) = LINK_MD_PATTERN.captures(input) {
             let complete_match = &caps[0];
-            let link_text = caps
-                .name("link_text")
-                .map(|m| decode_html_entities(m.as_str()).to_string())?;
+            let raw_link_text = caps.name("link_text").map(|m| m.as_str())?;
+            let link_text = decode_html_entities(raw_link_text).to_string();
             let url = caps
                 .name("url")
                 .map(|m| decode_html_entities(m.as_str()).to_string());
-            let title = if link_text.is_empty() {
+            let close_parenthesis: Option<String> = caps
+                .name("close_parenthesis")
+                .map(|m| decode_html_entities(m.as_str()).to_string());
+            // An image as the link text renders as a child `<img>`; the title is
+            // then empty so the raw markdown isn't printed alongside it. An
+            // unterminated link keeps its text, since it may still be streaming.
+            let image = close_parenthesis
+                .as_ref()
+                .and_then(|_| parse_image(raw_link_text))
+                .map(|(node, _)| node);
+            let title = if image.is_some() {
+                String::new()
+            } else if link_text.is_empty() {
                 url.clone().unwrap_or_default()
             } else {
                 link_text
             };
-            let close_parenthesis: Option<String> = caps
-                .name("close_parenthesis")
-                .map(|m| decode_html_entities(m.as_str()).to_string());
+            let mut node = Node::new(Link {
+                url: url,
+                title,
+                close_parenthesis: close_parenthesis,
+                config: *config,
+            });
+            node.children.extend(image);
             Some((
-                Node::new(Link {
-                    url: url,
-                    title,
-                    close_parenthesis: close_parenthesis,
-                    config: *config,
-                }),
+                node,
                 // NOTE(Rehan): trim end to not replace trailing newline
                 complete_match.trim_end().len(),
             ))

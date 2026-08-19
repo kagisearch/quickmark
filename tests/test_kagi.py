@@ -36,6 +36,25 @@ class TestLinkProcessor:
         assert "<img" in html_text
         assert "https://www.example.com/image.png" in html_text
 
+    def test_image_inside_link(self):
+        # Assistant emits map snapshots and proxied images as an image wrapped
+        # in a link. The link text is image markdown and must render as an
+        # <img>, not as the literal characters.
+        md_text = "[![](/maps/inline_snapshot/51.5582,-0.1557)](https://kagi.com/maps?q=cafe)"
+        html_text = md_to_html(md_text)
+        assert '<a href="https://kagi.com/maps?q=cafe"' in html_text
+        assert "<img" in html_text
+        assert 'src="/maps/inline_snapshot/51.5582,-0.1557"' in html_text
+        assert 'alt=""' in html_text
+        assert "![" not in html_text
+
+    def test_image_inside_link_keeps_alt_text(self):
+        md_text = "[![Plot](https://example.com/graph.png)](https://example.com/source)"
+        html_text = md_to_html(md_text)
+        assert '<a href="https://example.com/source"' in html_text
+        assert 'alt="Plot"' in html_text
+        assert 'src="https://example.com/graph.png"' in html_text
+
     def test_link_empty_text_falls_back_to_url(self):
         md_text = "Check [](https://www.example.com/page) out."
         html_text = md_to_html(md_text)
