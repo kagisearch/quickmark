@@ -80,9 +80,11 @@ pub static SINGLE_BACKTICK_REGEX: Lazy<FancyRegex> = Lazy::new(|| {
 
 const SINGLE_BACKTICK_PLACEHOLDER: &str = "【‡SINGLE_BACKTICK‡】";
 
+type SegmentProcessor = Box<dyn FnMut(Cow<'_, str>) -> Cow<'_, str>>;
+
 struct Preprocessor {
     name: &'static str,
-    processor: fn(Cow<'_, str>) -> Cow<'_, str>,
+    processor: SegmentProcessor,
     include_inline_code: bool,
 }
 
@@ -132,7 +134,7 @@ fn restore_single_backticks(src: Cow<'_, str>) -> Cow<'_, str> {
 fn protect_codeblocks(
     src: Cow<'_, str>,
     include_inline_code: bool,
-    processor: fn(Cow<'_, str>) -> Cow<'_, str>,
+    mut processor: SegmentProcessor,
 ) -> Cow<'_, str> {
     let protected = if include_inline_code {
         replace_single_backticks(src)
@@ -163,14 +165,18 @@ fn protect_codeblocks(
     }
 }
 
-fn reenumerate_citations(src: Cow<'_, str>) -> Cow<'_, str> {
+// NOTE(Rehan): the counter lives outside the closure so numbering carries across
+// segments instead of restarting after every code block
+fn reenumerate_citations() -> SegmentProcessor {
     let mut counter = 0;
-    let result = CITATION_REGEX.replace_all(&src, |_caps: &regex::Captures| {
-        let result = format!("【{}】", counter);
-        counter += 1;
-        result
-    });
-    Cow::Owned(result.into_owned())
+    Box::new(move |src| {
+        let result = CITATION_REGEX.replace_all(&src, |_caps: &regex::Captures| {
+            let result = format!("【{}】", counter);
+            counter += 1;
+            result
+        });
+        Cow::Owned(result.into_owned())
+    })
 }
 
 pub fn preprocess<'a>(src: &'a str, enabled_plugins: &[String]) -> Cow<'a, str> {
@@ -181,12 +187,12 @@ pub fn preprocess<'a>(src: &'a str, enabled_plugins: &[String]) -> Cow<'a, str> 
     let processors = vec![
         Preprocessor {
             name: "kagi_contact_info",
-            processor: apply_contact_info_regex,
+            processor: Box::new(apply_contact_info_regex),
             include_inline_code: true,
         },
         Preprocessor {
             name: "citation",
-            processor: reenumerate_citations,
+            processor: reenumerate_citations(),
             include_inline_code: true,
         },
     ];

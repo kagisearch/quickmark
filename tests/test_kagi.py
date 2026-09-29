@@ -1,4 +1,7 @@
+import re
 import textwrap
+
+import pytest
 
 from quickmark.conversion import md_to_html
 from quickmark import (
@@ -226,6 +229,39 @@ class TestCitationProcessor:
             html_text
             == '<p>Steve Jobs was a human being <sup><a href="http://www.example.com" target="_blank">1</a></sup></p>'
         )
+
+    @pytest.mark.parametrize(
+        ("md_text", "expected_sources"),
+        [
+            ("a【1】 b【2】 c【3】 d【4】", ["a", "b", "c", "d"]),
+            ("`x` a【1】 b【2】 c【3】 d【4】", ["a", "b", "c", "d"]),
+            ("a【1】 b【2】 `x` c【3】 d【4】", ["a", "b", "c", "d"]),
+            ("a【1】 `x` b【2】 `y` c【3】 d【4】", ["a", "b", "c", "d"]),
+            ("a【1】 b【2】\n\n```\ncode\n```\n\nc【3】 d【4】", ["a", "b", "c", "d"]),
+        ],
+    )
+    def test_citations_keep_order_across_code(self, md_text, expected_sources):
+        citations = [
+            CitationQM(
+                index=index,
+                title=name,
+                source=f"https://{name}.example.com",
+                passage="passage",
+                md_offset=0,
+            )
+            for index, name in enumerate("abcd", start=1)
+        ]
+        html_text = md_to_html(
+            md_text,
+            rust_extensions=[
+                Plugin(name="backticks"),
+                Plugin(name="fence"),
+                Plugin(name="paragraph"),
+                CitationExtensionPlugin(citations=citations, open_links_in_new_tab=False),
+            ],
+        )
+        rendered = re.findall(r'<sup><a href="https://(\w+)\.example\.com">(\d+)</a></sup>', html_text)
+        assert rendered == [(name, str("abcd".index(name) + 1)) for name in expected_sources]
 
 
 class TestMathExtension:
