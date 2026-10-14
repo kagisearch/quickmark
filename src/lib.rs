@@ -407,15 +407,18 @@ impl MDParser {
     /// Render markdown string into HTML.
     /// If `xhtml` is true, then self-closing tags will include a slash, e.g. `<br />`.
     #[pyo3(signature = (src, *, xhtml=true))]
-    pub fn render(&self, src: &str, xhtml: bool) -> PyResult<String> {
-        let result = panic::catch_unwind(AssertUnwindSafe(|| {
-            let preprocessed = preprocess(src, &self.enabled_plugin_names);
-            let ast = self.parser.parse(preprocessed.as_ref());
-            match xhtml {
-                true => ast.xrender(),
-                false => ast.render(),
-            }
-        }));
+    pub fn render(&self, py: Python, src: &str, xhtml: bool) -> PyResult<String> {
+        // Release the GIL during rendering to allow other Python threads to run
+        let result = py.detach(|| {
+            panic::catch_unwind(AssertUnwindSafe(|| {
+                let preprocessed = preprocess(src, &self.enabled_plugin_names);
+                let ast = self.parser.parse(preprocessed.as_ref());
+                match xhtml {
+                    true => ast.xrender(),
+                    false => ast.render(),
+                }
+            }))
+        });
 
         match result {
             Ok(html) => Ok(html),
@@ -445,6 +448,8 @@ impl MDParser {
                 py_node.children.push(Py::new(py, py_node_child).unwrap());
             }
         }
+        // NOTE: tree() cannot easily release the GIL because walk_recursive
+        // creates Python objects (nodes::Node) which require the GIL.
         let result = panic::catch_unwind(AssertUnwindSafe(|| {
             let preprocessed = preprocess(src, &self.enabled_plugin_names);
             let ast = self.parser.parse(preprocessed.as_ref());
