@@ -47,6 +47,9 @@ use plugin_config::Plugin;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 mod nodes;
 
+#[cfg(test)]
+mod gil_tests;
+
 use std::{cell::Cell, panic, panic::AssertUnwindSafe, panic::PanicHookInfo};
 
 // Keep panic messages separate for concurrent renders. Releasing the GIL does
