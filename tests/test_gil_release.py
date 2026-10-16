@@ -48,6 +48,8 @@ def test_concurrent_renders():
             quickmark.Plugin(name="table"),
             quickmark.InlineMathExtensionPlugin(cache=True),
             quickmark.DisplayMathExtensionPlugin(cache=True),
+            # Highlights the fenced code blocks with each thread's own highlighter.
+            quickmark.InkjetPlugin(pygments_classes=True),
         ]
     )
 

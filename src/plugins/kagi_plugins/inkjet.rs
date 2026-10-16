@@ -15,7 +15,9 @@ use std::cell::RefCell;
 pub const CODE_HIGHLIGHT_SUFFIX: &str = "</code></pre></div>";
 // NOTE(Rehan): if we want to reuse the highlighter, it needs to be mutable
 // `thread_local!` runs once per thread. `RefCell` moves compile time borrow to runtime.
-// We only run one thread and only run this once on the thread, so this shouldn't really matter
+// render() releases the GIL, so several threads can highlight at once. Each thread
+// lazily builds its own Highlighter on first use, so no locking is needed, but every
+// new thread pays that setup cost once (warmup() only primes the shared language configs).
 thread_local! {
     static HIGHLIGHTER: RefCell<Highlighter> =
         RefCell::new(Highlighter::new());
