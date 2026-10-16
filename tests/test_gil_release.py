@@ -1,42 +1,24 @@
-"""
-Test that quickmark's MDParser.render() releases the GIL.
+"""Check GIL release and output consistency when sharing a parser across threads.
 
-The strategy: if the GIL is properly released during render(), then a background
-Python thread should be able to run concurrently while render() is executing.
-If the GIL is NOT released, the background thread will be completely blocked
-until render() finishes, and we'll observe a large wall-clock time for the
-background thread's work that overlaps with render().
-
-We use two independent measurements:
-1. A background thread repeatedly increments a counter using pure Python
-   (which requires the GIL). If the GIL is released by render(), the counter
-   should advance significantly during the render call.
-2. A background thread calls a simple C-extension-level no-op
-   (time.time()) in a tight loop and records how many calls it makes
-   during the render call.
-
-We also do a control test: measure how long the background thread takes to
-do its work when the GIL is NOT contested (render not running). Then we
-compare to see if the render call is blocking it.
+Threaded rendering throughput is measured in benchmarks/bench_threads.py.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+import sys
 import threading
 import time
-import sys
 
-# We'll import quickmark once it's built
 import quickmark
-
 
 # Use a large enough markdown input that render() takes a meaningful amount of time
 LARGE_MARKDOWN = "\n\n".join(
     [
-        "# Heading {}\n\n".format(i)
-        + "This is **bold** and *italic* text with `code` and [links](https://example.com).\n\n"
-        + "- item 1\n- item 2\n- item 3\n\n"
-        + "> A blockquote with some text in it.\n\n"
-        + "```python\ndef hello():\n    print('world')\n```\n\n"
-        + "| Col1 | Col2 | Col3 |\n|------|------|------|\n| a | b | c |\n| d | e | f |\n"
+        f"# Heading {i}\n\n"
+        "This is **bold** and *italic* text with `code` and [links](https://example.com).\n\n"
+        "- item 1\n- item 2\n- item 3\n\n"
+        "> A blockquote with some text in it.\n\n"
+        "```python\ndef hello():\n    print('world')\n```\n\n"
+        "| Col1 | Col2 | Col3 |\n|------|------|------|\n| a | b | c |\n| d | e | f |\n"
         for i in range(500)
     ]
 )
@@ -113,9 +95,7 @@ def test_render_releases_gil():
     # Step 3: start background probe thread
     stop_event = threading.Event()
     probe_results = {}
-    probe_thread = threading.Thread(
-        target=_gil_probe, args=(stop_event, probe_results)
-    )
+    probe_thread = threading.Thread(target=_gil_probe, args=(stop_event, probe_results))
     probe_thread.start()
 
     # Step 4: call render() - this is the critical section
@@ -153,12 +133,7 @@ def test_render_releases_gil():
 
 
 def test_concurrent_renders():
-    """Test that multiple threads can render concurrently.
-
-    If the GIL is released during render(), N threads should finish in
-    roughly the same wall-clock time as 1 thread (linear speedup).
-    If the GIL is NOT released, N threads should take ~N times as long.
-    """
+    """A shared parser must return the same HTML as serial rendering."""
     parser = quickmark.MDParser("zero")
     parser.enable_many(
         [
@@ -186,53 +161,14 @@ def test_concurrent_renders():
         ]
     )
 
-    NUM_THREADS = 4
+    documents = [f"# Render {i}\n\n{LARGE_MARKDOWN}" for i in range(8)]
+    expected = [parser.render(document) for document in documents]
 
-    def render_in_thread(results, idx):
-        t0 = time.monotonic()
-        html = parser.render(LARGE_MARKDOWN)
-        elapsed = time.monotonic() - t0
-        results[idx] = (elapsed, len(html))
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        # Consuming map retrieves every result and propagates worker exceptions.
+        actual = list(pool.map(parser.render, documents))
 
-    # Warm-up
-    parser.render("# warmup")
-
-    # Single-threaded baseline
-    results_single = {}
-    t0 = time.monotonic()
-    render_in_thread(results_single, 0)
-    single_wall = time.monotonic() - t0
-    single_render = results_single[0][0]
-
-    # Multi-threaded
-    results_multi = {}
-    threads = []
-    t0 = time.monotonic()
-    for i in range(NUM_THREADS):
-        t = threading.Thread(target=render_in_thread, args=(results_multi, i))
-        threads.append(t)
-        t.start()
-    for t in threads:
-        t.join()
-    multi_wall = time.monotonic() - t0
-
-    # Compute speedup
-    speedup = (single_render * NUM_THREADS) / multi_wall if multi_wall > 0 else 0
-    print(f"\n  Single render time:  {single_render:.4f}s")
-    print(f"  {NUM_THREADS}x single serial: {single_render * NUM_THREADS:.4f}s")
-    print(f"  {NUM_THREADS} threads wall:   {multi_wall:.4f}s")
-    print(f"  Speedup:            {speedup:.2f}x")
-
-    # If GIL is released, we should see at least 1.5x speedup
-    # (not perfect linear due to overhead, but definitely > 1x)
-    # If GIL is held, speedup will be ~1.0x (serialized)
-    assert speedup > 1.5, (
-        f"Multiple render threads are not achieving concurrency. "
-        f"Speedup is {speedup:.2f}x with {NUM_THREADS} threads "
-        f"(expected > 1.5x if GIL is released). "
-        f"Single render: {single_render:.4f}s, "
-        f"Multi-thread wall: {multi_wall:.4f}s."
-    )
+    assert actual == expected
 
 
 if __name__ == "__main__":
@@ -248,7 +184,7 @@ if __name__ == "__main__":
 
     print()
     print("=" * 60)
-    print("Test 2: Concurrent renders speedup test")
+    print("Test 2: Concurrent renders output test")
     print("=" * 60)
     try:
         test_concurrent_renders()
