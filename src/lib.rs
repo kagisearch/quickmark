@@ -47,13 +47,19 @@ use plugin_config::Plugin;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 mod nodes;
 
-use once_cell::sync::Lazy;
-use std::{panic, panic::AssertUnwindSafe, panic::PanicHookInfo, sync::Mutex};
+use std::{cell::Cell, panic, panic::AssertUnwindSafe, panic::PanicHookInfo};
 
-// NOTE(Rehan): storage for the most recent panic message
-// need to be mutex to be global variable that can be written to on runtime
-// even though multiple threads not expected
-static LAST_PANIC: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
+// Keep panic messages separate for concurrent renders. Releasing the GIL does
+// not change threads, so the hook and error handler access the same slot.
+thread_local! {
+    static LAST_PANIC: Cell<Option<String>> = const { Cell::new(None) };
+}
+
+fn take_panic_message() -> String {
+    LAST_PANIC
+        .take()
+        .unwrap_or_else(|| "Rust panic occurred".to_owned())
+}
 
 /// throw in our custom panic hook to silence rust panics and store the message instead
 pub fn init_panic_hook() {
@@ -72,7 +78,7 @@ pub fn init_panic_hook() {
             msg.push_str(&format!(" at {}:{}", location.file(), location.line()));
         }
 
-        *(LAST_PANIC.lock().unwrap()) = Some(msg);
+        LAST_PANIC.set(Some(msg));
     }));
 }
 
@@ -422,18 +428,7 @@ impl MDParser {
 
         match result {
             Ok(html) => Ok(html),
-            Err(_) => {
-                // unwrap ok here, can only be error if another thread doesn't let go of mutex
-                // but we don't expect that, one panic and we send the error up and stop
-                let lock_result = LAST_PANIC.lock();
-                let msg = match lock_result {
-                    Err(_) => "mutex lock failed".to_owned(),
-                    Ok(mut lock) => lock
-                        .take()
-                        .unwrap_or_else(|| "Rust panic occurred".to_owned()),
-                };
-                Err(PyRuntimeError::new_err(msg))
-            }
+            Err(_) => Err(PyRuntimeError::new_err(take_panic_message())),
         }
     }
 
@@ -460,16 +455,7 @@ impl MDParser {
         }));
         match result {
             Ok(node) => Ok(node),
-            Err(_) => {
-                let lock_result = LAST_PANIC.lock();
-                let msg = match lock_result {
-                    Err(_) => "mutex lock failed".to_owned(),
-                    Ok(mut lock) => lock
-                        .take()
-                        .unwrap_or_else(|| "Rust panic occurred".to_owned()),
-                };
-                Err(PyRuntimeError::new_err(msg))
-            }
+            Err(_) => Err(PyRuntimeError::new_err(take_panic_message())),
         }
     }
     /// warmup for quickmark
@@ -498,4 +484,52 @@ fn quickmark(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // plugins_module.add_function(wrap_pyfunction!(plugins::add_heading_anchors, plugins_module)?)?;
     // m.add_submodule(plugins_module)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod panic_tests {
+    use super::{init_panic_hook, take_panic_message};
+    use std::{panic, sync::Barrier, thread};
+
+    #[test]
+    fn concurrent_panics_keep_their_own_messages() {
+        let previous_hook = panic::take_hook();
+        init_panic_hook();
+        let barrier = Barrier::new(2);
+
+        let results = thread::scope(|scope| {
+            let handles: Vec<_> = ["first render failed", "second render failed"]
+                .into_iter()
+                .map(|message| {
+                    let barrier = &barrier;
+                    scope.spawn(move || {
+                        let result = panic::catch_unwind(|| panic!("{message}"));
+                        // Both hooks must finish writing before either message is read.
+                        barrier.wait();
+                        (
+                            message,
+                            result.is_err(),
+                            take_panic_message(),
+                            take_panic_message(),
+                        )
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join())
+                .collect::<Vec<_>>()
+        });
+        panic::set_hook(previous_hook);
+
+        for result in results {
+            let (expected, caught, message, consumed) = result.unwrap();
+            assert!(caught);
+            assert!(
+                message.starts_with(&format!("{expected} at {}:", file!())),
+                "expected this thread's panic and source location, got {message:?}"
+            );
+            assert_eq!(consumed, "Rust panic occurred");
+        }
+    }
 }
