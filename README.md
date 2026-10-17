@@ -19,6 +19,17 @@ uv run maturin develop --release
 
 **NOTE:** If using conda/mamba on macos, builds can break. [Reinstalling mamba helps.](https://github.com/PyO3/pyo3/issues/1554)
 
+To benchmark threaded rendering, build the release extension and run:
+
+```bash
+uv run maturin develop --release
+uv run python tests/benchmarks/bench_threads.py
+```
+
+The script reports median timings, throughput, and speedup for 1, 2, and 4
+workers sharing a parser, using the same total workload for each worker count.
+Worker startup and warmup are excluded. There is no minimum speedup requirement.
+Use `--input PATH`, `--config`, `--renders`, or `--rounds` to change the workload.
 
 # Usage (Rust)
 
